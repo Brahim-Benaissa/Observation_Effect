@@ -282,17 +282,19 @@ if plot_option
              'Color', [0.8500, 0.3250, 0.0980], 'MarkerFaceColor', [0.8500, 0.3250, 0.0980]);
 
 
-    xlabel('Radius (m)', 'FontSize', 14);
-    ylabel('Orbital Speed (m/s)', 'FontSize', 14);
+    xlabel('Radius (m)', 'FontSize', 16);
+    ylabel('Orbital Speed (m/s)', 'FontSize', 16);
     title(sprintf('Galaxy %d : %s', galaxy, galaxy_names{galaxy}), 'FontSize', 16);
-    legend('Location', 'best', 'FontSize', 12);
+    legend('Location', 'best', 'FontSize', 16);
     grid on;
     set(gca, 'GridColor', [0.8, 0.8, 0.8]);  % Set grid color to light gray
-    set(gca, 'FontSize', 12, 'LineWidth', 1.5);
+    set(gca, 'FontSize', 16, 'LineWidth', 1.5);
     box on;
     
     % Save high-quality figure
-    saveas(fig, sprintf('Galaxy_%d_%s_FullUncertainty.jpg', galaxy, galaxy_names{galaxy}), 'jpg');
+%     print(fig, sprintf('Galaxy_%d_%s_Scaled.jpg', galaxy, galaxy_names{galaxy}), '-djpeg', '-r600');
+    print(fig, sprintf('Galaxy_%d_%s_Scaled.png', galaxy, galaxy_names{galaxy}), '-dpng', '-r600');
+
   
     % Plotting Mezzi vs Observed radius in the same style as Figure A
     fig = figure('Position', [100 100 800 600], 'Color', 'w');
@@ -303,17 +305,18 @@ if plot_option
          'LineWidth', 1.8, 'DisplayName', 'Mezzi Coefficient', ...
          'Color', [0.4940, 0.1840, 0.5560], 'MarkerFaceColor', [0.4940, 0.1840, 0.5560]);
 
-    xlabel('Observed Radius (m)', 'FontSize', 14);
-    ylabel('Mezzi Scale Factor', 'FontSize', 14);
+    xlabel('Observed Radius (m)', 'FontSize', 16);
+    ylabel('Mezzi Scale Factor', 'FontSize', 16);
     title(sprintf('Galaxy %d : %s', galaxy, galaxy_names{galaxy}), 'FontSize', 16);
     grid on;
     set(gca, 'GridColor', [0.8, 0.8, 0.8]);  % Set grid color to light gray
     
-    set(gca, 'FontSize', 12, 'LineWidth', 1.5);
+    set(gca, 'FontSize', 16, 'LineWidth', 1.5);
     box on;
 
     % Save high-quality figure
-    saveas(fig, sprintf('Galaxy_%d_%s_Observed_R_vs_Mezzi.jpg', galaxy, galaxy_names{galaxy}), 'jpg');
+%     print(fig, sprintf('Galaxy_%d_%s_Observed_R_vs_Mezzi.jpg', galaxy, galaxy_names{galaxy}), '-djpeg', '-r600');
+    print(fig, sprintf('Galaxy_%d_%s_Observed_R_vs_Mezzi.png', galaxy, galaxy_names{galaxy}), '-dpng', '-r600');
  
 
     close all;

@@ -6,7 +6,7 @@ load('Coef.mat');
 load('galaxy_mass_properties');
 
 % Create figure with publication-quality dimensions and white background
-fig = figure('Position', [100, 100, 800, 600], 'Color', 'w');
+fig = figure('Position', [30, 70, 1000, 500], 'Color', 'w');
 hold on;
 
 % Define a refined, publication-quality color scheme
@@ -19,21 +19,21 @@ hBar = bar(corr_M_R_curvatures, 'FaceColor', bar_face_color, ...
     'EdgeColor', bar_edge_color, 'LineWidth', 1.5, 'BarWidth', 0.8);
 
 % Enhance axes labels with bold fonts for clarity
-xlabel('Galaxy', 'FontSize', 14, 'FontWeight', 'bold');
-ylabel('Mezzi/r^2 vs. Ricci Curvature Correlation', 'FontSize', 14, 'FontWeight', 'bold');
+xlabel('Galaxy', 'FontSize', 18, 'FontWeight', 'bold');
+ylabel('Curvature Correlation', 'FontSize', 18, 'FontWeight', 'bold');
 
 % Customize axes for a clean, professional appearance
-set(gca, 'FontSize', 12, 'LineWidth', 1.5, 'TickDir', 'out', 'Box', 'off');
+set(gca, 'FontSize', 16, 'LineWidth', 1.5, 'TickDir', 'out', 'Box', 'off');
 grid on;
 set(gca, 'GridLineStyle', '-', 'GridColor', [0.8, 0.8, 0.8]);
 
 % Adjust x-axis limits for visual balance
 xlim([0, numel(corr_M_R_curvatures) + 1]);
 ylim([0.7 1]);
-% Save the figure with high-quality output (300 dpi)
-print(fig, 'Galaxy_Correlation_BarChart.png', '-dpng', '-r300');
-saveas(fig, 'Galaxy_Correlation_BarChart.jpg');
-savefig(fig, 'Galaxy_Correlation_BarChart.fig');
+% Save the figure with high-quality output 
+print(fig, 'Galaxy_Correlation_BarChart.png', '-dpng', '-r600');
+% print(fig, 'Galaxy_Correlation_BarChart.jpg', '-djpeg', '-r600');
+% savefig(fig, 'Galaxy_Correlation_BarChart.fig');
 
 hold off;
 close(fig);
@@ -41,7 +41,7 @@ close(fig);
 
 
 % Create figure with publication-quality dimensions and white background
-fig = figure('Position', [100, 100, 800, 600], 'Color', 'w');
+fig = figure('Position', [30, 70, 1000, 500], 'Color', 'w');
 hold on;
 
 % Define a refined, publication-quality color scheme
@@ -54,21 +54,21 @@ hBar = bar(Mezzi_Mass, 'FaceColor', bar_face_color, ...
     'EdgeColor', bar_edge_color, 'LineWidth', 1.5, 'BarWidth', 0.8);
 
 % Enhance axes labels with bold fonts for clarity
-xlabel('Galaxy', 'FontSize', 14, 'FontWeight', 'bold');
-ylabel('Mezzi Mass coefficient', 'FontSize', 14, 'FontWeight', 'bold');
+xlabel('Galaxy', 'FontSize', 18, 'FontWeight', 'bold');
+ylabel('Mezzi Mass coefficient', 'FontSize', 18, 'FontWeight', 'bold');
 
 % Customize axes for a clean, professional appearance
-set(gca, 'FontSize', 12, 'LineWidth', 1.5, 'TickDir', 'out', 'Box', 'off');
+set(gca, 'FontSize', 16, 'LineWidth', 1.5, 'TickDir', 'out', 'Box', 'off');
 grid on;
 set(gca, 'GridLineStyle', '-', 'GridColor', [0.8, 0.8, 0.8]);
 
 % Adjust x-axis limits for visual balance
 xlim([0, numel(corr_M_R_curvatures) + 1]);
 ylim([1 100]);
-% Save the figure with high-quality output (300 dpi)
-print(fig, 'Mezzi_Mass_coefficient_BarChart.png', '-dpng', '-r300');
-saveas(fig, 'Mezzi_Mass_coefficient_BarChart.jpg');
-savefig(fig, 'Mezzi_Mass_coefficient_BarChart.fig');
+% Save the figure with high-quality output  
+print(fig, 'Mezzi_Mass_coefficient_BarChart.png', '-dpng', '-r600');
+% print(fig, 'Mezzi_Mass_coefficient_BarChart.jpg', '-djpeg', '-r600');
+% savefig(fig, 'Mezzi_Mass_coefficient_BarChart.fig');
 
 hold off;
 close(fig);
@@ -105,15 +105,15 @@ fill([X; flipud(X)], [ci(:,1); flipud(ci(:,2))], [0.1, 0.2, 0.6],...
     'FaceAlpha', 0.15, 'EdgeColor', 'none');
 
 % Set axes labels
-xlabel('Mezzi Scale Curvature (1/m²)', 'FontSize', 14);
-ylabel('Ricci Curvature (1/m²)', 'FontSize', 14);
+xlabel('Mezzi Scale Curvature (1/m²)', 'FontSize', 18);
+ylabel('Ricci Curvature (1/m²)', 'FontSize', 18);
 
 title(sprintf('Galaxy %d : %s', galaxy, galaxy_names{galaxy}), 'FontSize', 16);
 
 % Set grid and axes properties
 grid on;
 set(gca, 'GridColor', [0.8, 0.8, 0.8],...
-    'FontSize', 12,...
+    'FontSize', 16,...
     'LineWidth', 1.5,...
     'Box', 'on');
 
@@ -121,7 +121,9 @@ set(gca, 'GridColor', [0.8, 0.8, 0.8],...
 % legend('Data Points', 'Linear Fit', '98% Confidence Interval','Location', 'north');
 
 % Save the figure
-saveas(fig, sprintf('Galaxy_%d_Mezzi_R2_vs_Ricci.jpg', galaxy), 'jpg');
+% print(fig, sprintf('Galaxy_%d_Mezzi_R2_vs_Ricci.jpg', galaxy), '-djpeg', '-r600');
+print(fig, sprintf('Galaxy_%d_Mezzi_R2_vs_Ricci.png', galaxy), '-dpng', '-r600');
+
 
 hold off;
 
