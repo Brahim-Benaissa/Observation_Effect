@@ -1,6 +1,9 @@
 clc;
 clear;
 
+
+%% Main Script
+
 % Read galaxy rotation data
 [galaxy_names, observed_radius, observed_speed, e_Vobs] = read_rotation_data('OBSERVED_Rotation.txt');
 
@@ -16,7 +19,7 @@ total_baryonic_mass = cell(size(galaxy_names));
 total_baryonic_mass_err = cell(size(galaxy_names));
 enclosed_masses = cell(size(galaxy_names));
 enclosed_masses_err = cell(size(galaxy_names));
-radius_uncertainties = cell(size(galaxy_names));  
+radius_uncertainties = cell(size(galaxy_names)); % New container for radius errors
 
 % Initialize galaxy distance  
 galaxy_distances = NaN(size(galaxy_names));
@@ -29,25 +32,25 @@ for g = 1:length(galaxy_names)
     idx = find(strcmp(gs_galaxy_names, current_galaxy), 1);
     
     % Get distance and its uncertainty
-    D = Distance_to_G(idx);  
-    e_D_val = e_D(idx);  
+    D = Distance_to_G(idx); % Distance in Mpc
+    e_D_val = e_D(idx); % Distance uncertainty
     
-    % Convert radius uncertainties  
+    % Convert radius uncertainties (δR/R = δD/D)
     R_kpc = observed_radius{g};
-    e_R_kpc = R_kpc * (e_D_val/D);  
-    radius_uncertainties{g} = e_R_kpc * 3.086e+19;  
+    e_R_kpc = R_kpc * (e_D_val/D); % Radius uncertainty in kpc
+    radius_uncertainties{g} = e_R_kpc * 3.086e+19; % Convert to meters
     
-    % Error propagation for disk luminosity
+       % Error propagation for disk luminosity
     L_disk = gs_L36(idx) - gs_Lbulge(idx);
-    e_L_disk = sqrt(e_L36(idx)^2 + 0^2);  
+    e_L_disk = sqrt(e_L36(idx)^2 + 0^2); % Assuming no Lbulge error
     
-    % Disk mass with error propagation  
+    % Disk mass with error propagation (M2L error only)
     M_disk = gs_M2L(idx) * L_disk * 1e9;
     e_M_disk = M_disk * (e_M2L(idx)/gs_M2L(idx));
     
-    % Bulge mass with error propagation  
+    % Bulge mass with error propagation (M2Lb error not available)
     M_bulge = gs_M2Lb(idx) * gs_Lbulge(idx);
-    e_M_bulge = 0; 
+    e_M_bulge = 0; % No M2Lb uncertainty data
     
     % Total baryonic mass with error
     total_baryonic_mass{g} = M_disk + M_bulge;
@@ -59,11 +62,14 @@ for g = 1:length(galaxy_names)
     M_disk_ordered (g) = M_disk;
     M_bulge_ordered (g) = M_bulge;
         
+        
     % Process enclosed masses with errors
     radii = observed_radius{g};
     enc_mass = zeros(size(radii));
     enc_mass_err = zeros(size(radii));
     
+  
+
     % Loop over each radius to calculate enclosed mass
     for r_idx = 1:length(radii)
         r = radii(r_idx);
@@ -72,6 +78,7 @@ for g = 1:length(galaxy_names)
         [enc_disk, e_enc_disk] = compute_enclosed_disk_mass(r, M_disk, e_M_disk, gs_Rdisk(idx));
 
         % Enclosed bulge mass (assuming Hernquist profile)
+
         [enc_bulge, e_enc_bulge] = compute_enclosed_bulge_mass(r, M_bulge, e_M_bulge, gs_Reff(idx));
 
         % Total enclosed mass with error
@@ -115,16 +122,18 @@ for galaxy = 1:1:length(galaxy_names)
     e_Vobs_km_s = e_Vobs{galaxy};
        
     % Unit conversions
-    Robs_m = Robs_kpc * 3.086e+19;  
+    Robs_m = Robs_kpc * 3.086e+19;
+    
     Vobs_m_s = Vobs_km_s * 1e3;
     e_Vobs_m_s = e_Vobs_km_s * 1e3;
     
-    % Get Mass with uncertainties
+    % Get Newtonian predictions with errors
     current_enclosed = enclosed_masses{galaxy};
     current_enclosed_err = enclosed_masses_err{galaxy};
     solar_mass_kg = 1.9885e30;
     Enclosed_Mass_kg = current_enclosed * solar_mass_kg;
     e_Enclosed_Mass_kg = current_enclosed_err * solar_mass_kg;
+    
     total_baryonic_mass = total_baryonic_mass{galaxy};
     gs_Rdisk = gs_Rdisk_ordered(galaxy);
     gs_Reff = gs_Reff_ordered(galaxy);
@@ -139,28 +148,39 @@ for galaxy = 1:1:length(galaxy_names)
     ub = repmat(ub_scalar, 1, length(Vobs_km_s)+1);
    
     
-    % Set boundary for the Mezzi mass coefficient 
+    
     lb(1)=0;
     ub(1)=100;
     
-    % Initialize plotting variables
     Num_Paramters = length(Vobs_km_s)+1;
+    
+    % Initialize plotting variables
     bestPositionsHistory = zeros(Max_Its, Num_Paramters);
     bestScoresHistory = zeros(1, Max_Its);
     
     % Optimization loop 
+        tic;
+        Eva = 0;
+    
         % Initialize positions within bounds
         Pos = lb' + rand(Num_Paramters, Pop) .* (ub' - lb');
+    
         Fit = zeros(1, Pop);
     
         % Initial population evaluation
         for i = 1:Pop
             [Norm_Error, VNewton, e_VNewton, Vfit, e_Vfit] = analyzeGalaxyOrbitalSpeed(Robs_m, Vobs_m_s, Enclosed_Mass_kg, Pos(:, i), e_Enclosed_Mass_kg, e_Robs_m);
             Fit(i) = Norm_Error;
+            Eva = Eva + 1;
         end
     
-  
-        % Best solutions initialization 
+        % Best solutions initialization
+        Best_Poses = Pos;
+        Best_Fits = Fit;
+        [Optimum_Fit, ind] = min(Fit);
+        Center = Pos(:, ind);
+    
+        % Initialization 
         Best_Poses = Pos;
         Best_Fits = Fit;
         MeanBest = mean(Best_Poses, 2);
@@ -198,6 +218,7 @@ for galaxy = 1:1:length(galaxy_names)
             for i = 1:Pop
                 [Norm_Error, VNewton, e_VNewton, Vfit, e_Vfit] = analyzeGalaxyOrbitalSpeed( Robs_m, Vobs_m_s, Enclosed_Mass_kg, Pos(:, i), e_Enclosed_Mass_kg, e_Robs_m);
                 Fit(i) = Norm_Error;
+                Eva = Eva + 1;
                 if Fit(i) < Best_Fits(i)
                     Best_Fits(i) = Fit(i);
                     Best_Poses(:, i) = Pos(:, i);
@@ -242,20 +263,21 @@ for galaxy = 1:1:length(galaxy_names)
 
    %   Store Coefficients  
     All_Coef_value {galaxy} =  Center(:);
-    Mezzi_Mass (galaxy) =  Center(1);
-    Mezzi_Scale_Factor {galaxy} =  1./Center(2:end);
+    Mass_Coef (galaxy) =  Center(1);
+    Space_Scale_Coef {galaxy} =  1./Center(2:end);
     
         
     % Analysis 
-    % Mezzi Scale curvature (Mezzi/R²)
-    Mezzi_Scale_curvature {galaxy} =  Mezzi_Scale_Factor{galaxy}./ All_Robs{galaxy}.^2';
+    % (Space_Scale/R²)
+    Space_Scale_over_R_squared {galaxy} =  Space_Scale_Coef{galaxy}./ All_Robs{galaxy}.^2';
 
-    % Ricci spacetime curvature
-    [Ricci_curvature{galaxy},EscapeV_by_radius{galaxy}] = calculate_spacetime_curvature(All_Robs{galaxy}, All_Enclosed_Masses{galaxy});
+    % Recci spacetime curvature
+    [Recci_curve{galaxy},EscapeV_by_radius{galaxy}] = calculate_spacetime_curvature(All_Robs{galaxy}, All_Enclosed_Masses{galaxy});
 
     % correlation 
-    corr_M_R_curvatures(galaxy) = corr(Mezzi_Scale_curvature{galaxy}, Ricci_curvature{galaxy}');
+    corr_Space_Scale_r_sqrd_Curvature(galaxy) = corr(Space_Scale_over_R_squared{galaxy}, Recci_curve{galaxy}');
     
+
     
 if plot_option  
     disp(['Stopped in: ' num2str(It) ' iterations']);
@@ -278,106 +300,111 @@ if plot_option
 
     % Newtonian prediction with error bars in a striking orange
     errorbar(Robs_m, VNewton, e_VNewton, '.', 'MarkerSize', 20, ...
-             'CapSize', 8, 'LineWidth', 1.8, 'DisplayName', 'Newtonian(Mezzi)', ...
+             'CapSize', 8, 'LineWidth', 1.8, 'DisplayName', 'Newtonian(With Obs Efct)', ...
              'Color', [0.8500, 0.3250, 0.0980], 'MarkerFaceColor', [0.8500, 0.3250, 0.0980]);
 
 
-    xlabel('Radius (m)', 'FontSize', 16);
-    ylabel('Orbital Speed (m/s)', 'FontSize', 16);
+    xlabel('Observed Radius (m)', 'FontSize', 14);
+    ylabel('Orbital Speed (m/s)', 'FontSize', 14);
     title(sprintf('Galaxy %d : %s', galaxy, galaxy_names{galaxy}), 'FontSize', 16);
-    legend('Location', 'best', 'FontSize', 16);
+    legend('Location', 'best', 'FontSize', 12);
     grid on;
     set(gca, 'GridColor', [0.8, 0.8, 0.8]);  % Set grid color to light gray
-    set(gca, 'FontSize', 16, 'LineWidth', 1.5);
+    set(gca, 'FontSize', 12, 'LineWidth', 1.5);
     box on;
     
     % Save high-quality figure
-%     print(fig, sprintf('Galaxy_%d_%s_Scaled.jpg', galaxy, galaxy_names{galaxy}), '-djpeg', '-r600');
-    print(fig, sprintf('Galaxy_%d_%s_Scaled.png', galaxy, galaxy_names{galaxy}), '-dpng', '-r600');
-
-  
-    % Plotting Mezzi vs Observed radius in the same style as Figure A
+    saveas(fig, sprintf('Galaxy_%d_%s_FullUncertainty.jpg', galaxy, galaxy_names{galaxy}), 'jpg');
+ 
+    
+   
+     % Plotting Space_Scale vs Observed radius in the same style as Figure A
     fig = figure('Position', [100 100 800 600], 'Color', 'w');
     hold on;
 
-    % Plotting Mezzi Coefficient data with similar styling to error bars in Figure A
-    plot(All_Robs{galaxy}, Mezzi_Scale_Factor{galaxy}, '-o', 'MarkerSize', 5, ...
-         'LineWidth', 1.8, 'DisplayName', 'Mezzi Coefficient', ...
+    % Plotting Space_Scale Coefficient data with similar styling to error bars in Figure A
+    plot(All_Robs{galaxy}, Space_Scale_Coef{galaxy}, '-o', 'MarkerSize', 5, ...
+         'LineWidth', 1.8, 'DisplayName', 'Space_Scale Coefficient', ...
          'Color', [0.4940, 0.1840, 0.5560], 'MarkerFaceColor', [0.4940, 0.1840, 0.5560]);
 
-    xlabel('Observed Radius (m)', 'FontSize', 16);
-    ylabel('Mezzi Scale Factor', 'FontSize', 16);
+    xlabel('Observed Radius (m)', 'FontSize', 14);
+    ylabel('Space_Scale Scale Factor', 'FontSize', 14);
     title(sprintf('Galaxy %d : %s', galaxy, galaxy_names{galaxy}), 'FontSize', 16);
     grid on;
     set(gca, 'GridColor', [0.8, 0.8, 0.8]);  % Set grid color to light gray
     
-    set(gca, 'FontSize', 16, 'LineWidth', 1.5);
+    set(gca, 'FontSize', 12, 'LineWidth', 1.5);
     box on;
 
     % Save high-quality figure
-%     print(fig, sprintf('Galaxy_%d_%s_Observed_R_vs_Mezzi.jpg', galaxy, galaxy_names{galaxy}), '-djpeg', '-r600');
-    print(fig, sprintf('Galaxy_%d_%s_Observed_R_vs_Mezzi.png', galaxy, galaxy_names{galaxy}), '-dpng', '-r600');
+    saveas(fig, sprintf('Galaxy_%d_%s_Observed_R_vs_Space_Scale.jpg', galaxy, galaxy_names{galaxy}), 'jpg');
  
 
+ 
     close all;
 end
+     
 
     % Load the data from the MAT file
     load('galaxy_Rotation_data.mat');
     load('galaxy_mass_properties.mat');
 end
 
+ 
+
 % Save the data to a MAT file
-save('Coef.mat', 'All_VNewton', 'All_Vobs', 'All_Vfit', 'All_Robs', 'All_Enclosed_Masses', 'All_Coef_value', 'Mezzi_Mass', 'Mezzi_Scale_Factor', 'Mezzi_Scale_curvature', 'Ricci_curvature', 'EscapeV_by_radius', 'corr_M_R_curvatures');
+save('Coef.mat', 'All_VNewton', 'All_Vobs', 'All_Vfit', 'All_Robs', 'All_Enclosed_Masses', 'All_Coef_value', 'Mass_Coef', 'Space_Scale_Coef', 'Space_Scale_over_R_squared', 'Recci_curve', 'EscapeV_by_radius', 'corr_Space_Scale_r_sqrd_Curvature');
 
 save('Uncertainty.mat','All_e_VNewton','All_e_Vobs','All_e_Vfit','All_e_Robs','All_e_Enclosed_Masses');
+
+
+
 
 
 %% objective function 
 function [Norm_Error, VNewton, e_VNewton, Vfit, e_Vfit] = analyzeGalaxyOrbitalSpeed(Robs_m, Vobs_m_s, Enclosed_Mass_kg, X, e_Enclosed_Mass_kg, e_Robs_m)
     % Constants
-    G = 6.67430e-11; 
+    G = 6.67430e-11; % m³/kg/s²
+
+    Enclosed_Mass_kg = Enclosed_Mass_kg * X(1); 
     
-    Mezzi_Mezzi_Mass = X(1);
-    Mezzi_Scale_Factor = X(2:end)';
+    % Calculate Newtonian velocity using ENCLOSED MASSES
+    VNewton = sqrt(G * Enclosed_Mass_kg ./ Robs_m); % m/s
     
-    % Scale the enclosed mass
-    Enclosed_Mass_kg = Enclosed_Mass_kg * Mezzi_Mezzi_Mass; 
-    
-    % Calculate Newtonian velocity 
-    VNewton = sqrt(G * Enclosed_Mass_kg ./ Robs_m); 
-    
-    % Error propagation 
+    % Error propagation formula: δV/V = 0.5√[(δM/M)² + (δR/R)²]
     relative_mass_error = e_Enclosed_Mass_kg ./ Enclosed_Mass_kg;
     relative_radius_error = e_Robs_m ./ Robs_m;
     combined_relative_error = 0.5 * sqrt(relative_mass_error.^2 + relative_radius_error.^2);
     
-    % velocity uncertainty
+    % Absolute velocity uncertainty
     e_VNewton = VNewton .* combined_relative_error;
     
-    % scale the velocities and calculate error
-    Vfit = VNewton .* Mezzi_Scale_Factor; 
+    % Apply scaling factors and calculate error
+    Vfit = VNewton .* X(2:end)'; % m/s
     
     % Fit velocity uncertainty
     e_Vfit = Vfit .* combined_relative_error;
     
-    % Objective function
+    
     Norm_Error = norm(Vfit - Vobs_m_s);
 end
+
+
+
 
 
 %% Helper Functions 
 function [enc_disk, e_enc_disk] = compute_enclosed_disk_mass(r, M_disk, e_M_disk, R_disk)
     x = r / R_disk;
     enc_disk = M_disk * (1 - (1 + x) * exp(-x));
-    e_enc_disk = e_M_disk * (1 - (1 + x) * exp(-x)); 
+    e_enc_disk = e_M_disk * (1 - (1 + x) * exp(-x)); % Error scales linearly
 end
 
 function [enc_bulge, e_enc_bulge] = compute_enclosed_bulge_mass(r, M_bulge, e_M_bulge, R_eff)
     if R_eff > 0 && M_bulge > 0
         a = R_eff / 1.8153;
         enc_bulge = M_bulge * (r / (r + a))^2;
-        e_enc_bulge = e_M_bulge * (r / (r + a))^2; 
+        e_enc_bulge = e_M_bulge * (r / (r + a))^2; % Error scales with mass
     else
         enc_bulge = 0;
         e_enc_bulge = 0;
@@ -385,22 +412,25 @@ function [enc_bulge, e_enc_bulge] = compute_enclosed_bulge_mass(r, M_bulge, e_M_
 end
 
 
+
+
 % Calculate the Ricci scalar curvature and escape velocity
 function [R, v_esc] = calculate_spacetime_curvature(r, M)
     % Constants
-    G = 6.67430e-11;  
-    c = 299792458;    
+    G = 6.67430e-11;  % gravitational constant (m^3 kg^-1 s^-2)
+    c = 299792458;    % speed of light (m/s)
     
     % Compute derivative of M with respect to r using central differences
     dMdr = gradient(M, r);
     
-    % Compute Ricci scalar curvature   
+    % Compute Ricci scalar curvature: R = (2G/c^2) * (dM/dr) / r^2
     R = 2 * G * dMdr ./ (c^2 * r.^2);
     
-    % Compute escape velocity   
+    % Compute escape velocity: v_esc = sqrt(2GM/r)
     v_esc = sqrt(2 * G * M ./ r);
     
 end
+
 
 
 % Function to read galaxy rotation data
@@ -449,6 +479,7 @@ function [galaxy_names, observed_radius, observed_speed, e_Vobs] = read_rotation
 end
 
 
+
 % Function to read galaxy mass data
 function [gs_galaxy_names, M2L, e_M2L, M2Lb, L36, e_L36, Lbulge,  ...
           Rdisk, Reff, Distance, e_D] = read_mass_data(filename)
@@ -480,3 +511,8 @@ function [gs_galaxy_names, M2L, e_M2L, M2Lb, L36, e_L36, Lbulge,  ...
     % Close the file
     fclose(fileID);
 end
+
+
+
+
+
